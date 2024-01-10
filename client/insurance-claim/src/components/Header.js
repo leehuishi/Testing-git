@@ -32,7 +32,7 @@ const Header = ({title, titlealign}) => {
 }
 
 Header.defaultProps = {
-    title: 'Claim System',
+    title: 'Insurance Claim System',
     titlealign: 'space-between',
     logout_func: ''
 }

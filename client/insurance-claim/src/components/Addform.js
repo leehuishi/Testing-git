@@ -1,47 +1,85 @@
 import { useState, useEffect } from 'react';
-import Proj from './Proj';
-import Ccy from './Ccy';
-import { useNavigate } from "react-router-dom";
+import Pol from './Pol';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const Addform = ({ onAdd, projects, ccies, error, navhome}) => {
+const Addform = ({ onAdd, Policies, error, navhome, status}) => {
     const emp_id = sessionStorage.getItem("emp_id");
 
-    const [ProjectID, setProjectID] = useState('');
+    const [InsuranceID, setInsuranceID] = useState('');
     const [EmployeeID,  setEmployeeID] = useState(emp_id);
-    const [CurrencyID, setCurrencyID] = useState('');
+    const [FirstName, setFirstName] = useState('');
+    const [LastName, setLastName] = useState('');
     const [ExpenseDate, setExpenseDate] = useState(new Date());
     const [Amount, setAmount] = useState('');
     const [Purpose, setPurpose] = useState('');
-    const [ChargetoDefault, setChargetoDefault] = useState(false);
-    const [AlternativeDept, setAlternativeDept] = useState('');
+    const [FollowUp, setFollowUp] = useState(false);
+    const [PreviousClaimID, setPreviousClaimID] = useState('');
+    const [diserror, setDiserror] = useState(error);
+    const pattern = new RegExp(/^\d*(\.\d{0,2})?$/);
 
     const onSubmit = (e) => {
         e.preventDefault(); //does not submit to a page
 
-        onAdd({ ProjectID, EmployeeID, CurrencyID, ExpenseDate, Amount, Purpose, ChargetoDefault, AlternativeDept});
+        if(!InsuranceID){
+            setDiserror("Please select Claim Type");
+        }
+        else if(!EmployeeID){
+            setDiserror("Please exit this page and login again");
+        }
+        else if(!FirstName){
+            setDiserror("Please enter First Name");
+        }
+        else if(!LastName){
+            setDiserror("Please enter Last Name");
+        }
+        else if(!ExpenseDate){
+            setDiserror("Please select Expense Date");
+        }
+        else if(!Amount){
+            setDiserror("Please enter Amount");
+        }
+        else if (!pattern.test(Amount)){
+            setDiserror("Amount format incorrect");
+        }
+        else if(!Purpose){
+            setDiserror("Please enter Purpose");
+        }
+        else if(FollowUp === true && !PreviousClaimID){
+            setDiserror("Please enter Previous Claim ID when Follow Up is selected");
+        }
+        else if(FollowUp === false && PreviousClaimID){
+            setDiserror("Please tick Follow Up when Previous Claim ID is entered");
+        }
+        else{
+            setDiserror("");
+            onAdd({ InsuranceID, EmployeeID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID});
+        }
+        
+        window.scrollTo(0, 0);
 
-        // //clear form
-        setProjectID('');
-        setCurrencyID('');
+        //clear form
+        setInsuranceID('');
+        setFirstName('');
+        setLastName('');
         setExpenseDate(new Date());
         setAmount('');
         setPurpose('');
-        setChargetoDefault(false);
-        setAlternativeDept('');
+        setFollowUp(false);
+        setPreviousClaimID('');
     }
 
     return (
         <form className='add-form' onSubmit={onSubmit}>
-            {(error !== "") ? (<div className="error">{error}</div>) : ""}
+            {(status !== "") ? (<div style={{color: 'green'}}>{status}</div>) : ""}
+            {(diserror !== "") ? (<div className="error">{diserror}</div>) : ""}
 
             <div className='form-control2'>
-                <label>Project ID:</label>
-                <select value={ProjectID} onChange={(e) => setProjectID(e.target.value)}>
-                    <option value=''>Select Project</option>
-                    {projects.map((project) => (
-                        <Proj key={project.ProjectID} project={project} />
+                <label>Insurance Type:</label>
+                <select value={InsuranceID} onChange={(e) => setInsuranceID(e.target.value)}>
+                    <option value=''>Select Type</option>
+                    {Policies.map((policy) => (
+                        <Pol key={policy.InsuranceID} policy={policy} />
                     ))}
 
                 </select>
@@ -53,13 +91,13 @@ const Addform = ({ onAdd, projects, ccies, error, navhome}) => {
             </div>
 
             <div className='form-control2'>
-                <label>Currency:</label>
-                <select value={CurrencyID} onChange={(e) => setCurrencyID(e.target.value)}>
-                    <option value=''>Select Currency</option>
-                    {ccies.map((ccy) => (
-                        <Ccy key={ccy.CurrencyID} ccy={ccy} />
-                    ))}
-                </select>
+                <label>First Name</label>
+                <input value={FirstName} onChange={(e) => setFirstName(e.target.value)}/>
+            </div>
+
+            <div className='form-control2'>
+                <label>Last Name</label>
+                <input value={LastName} onChange={(e) => setLastName(e.target.value)}/>
             </div>
 
             <div className='form-control2'>
@@ -78,23 +116,23 @@ const Addform = ({ onAdd, projects, ccies, error, navhome}) => {
             </div>
             
             <div className='form-control2 form-control2-check'>
-                <label>Charge to Default Dept</label>
+                <label>Follow Up</label>
                 <input type='checkbox' 
-                checked={ChargetoDefault}
-                value={ChargetoDefault} 
-                onChange={(e) => setChargetoDefault(e.currentTarget.checked)}/>
+                checked={FollowUp}
+                value={FollowUp} 
+                onChange={(e) => setFollowUp(e.currentTarget.checked)}/>
             </div>
 
-            {ChargetoDefault === true ? (
+            {FollowUp === true ? (
                 <div className='form-control2'>
-                    <label>Alternative Dept Code</label>
-                    <input value={AlternativeDept} onChange={(e) => setAlternativeDept(e.target.value)}/>
+                    <label>Previous Claim ID</label>
+                    <input value={PreviousClaimID} onChange={(e) => setPreviousClaimID(e.target.value)}/>
                 </div>
             ): ''}
 
             <input type='submit' value='Add Claim ' className='btn btn-block' />
 
-            <button onClick={navhome} className='btn btn-block' style={{backgroundColor: 'red' }}>Cancel</button>
+            <button onClick={navhome} className='btn btn-block' style={{backgroundColor: 'red' }}>Back</button>
         </form>
     )
 }

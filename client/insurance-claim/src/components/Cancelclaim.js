@@ -25,7 +25,7 @@ const Cancelclaim = () => {
     // Cancel claim (to update status to cancelled)
     //=========================================================    
     const cancelClaim = async () => {
-        const json_claim_id = {'claim_id': params.id}
+        const json_claim_id = {'ClaimID': params.id}
 
         const res = await fetch('http://127.0.0.1:5000/cancelclaim', {
         method: 'PUT',

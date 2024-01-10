@@ -36,13 +36,12 @@ const Claim = ({ claim, onCancel, onEdit }) => {
   return (
     <tr>
         <td>{claim.ClaimID}</td>
-        <td>{claim.ProjectID}</td>
-        <td>{claim.ProjectName}</td>
+        <td>{claim.InsuranceType}</td>
         <td>{claim.ExpenseDate}</td>
-        <td>{claim.CurrencyID} {claim.Amount}</td>
+        <td>{claim.Amount}</td>
         <td>{claim.Purpose}</td>
+        <td>{claim.PreviousClaimID}</td>
         <td style={{color: Statuscolor}}>{claim.Status}</td>
-        {/* <td>{claim.Status}</td> */}
         <td>{Statusaction === "can" ? (
             <>
               <FaTimes style={{color: 'red', cursor:'pointer'}} onClick={() => onCancel(claim.ClaimID)} />

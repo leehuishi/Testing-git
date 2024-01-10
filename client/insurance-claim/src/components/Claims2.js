@@ -7,11 +7,11 @@ const Claims2 = ({ claims, onCancel, onEdit }) => {
         <tr>
           {/* <th style={{width: '200px'}}>Claim ID</th> */}
           <th>Claim ID</th>
-          <th>Proj ID</th>
-          <th>Proj Name</th>
+          <th>Type</th>
           <th>Expense Date</th>
           <th>Amt</th>
           <th>Purpose</th>
+          <th>Previous Claim</th>
           <th>Status</th>
           <th>Action</th>
         </tr>

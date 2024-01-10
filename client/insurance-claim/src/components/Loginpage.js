@@ -68,9 +68,6 @@ const Loginpage = () => {
                 //fetch successful - check result
                 const data = await res.json();
                 const checkerror2 = 'error' in data;
-                // console.log(res)
-                // console.log(data)
-                // console.log(checkerror2)
 
                 if(checkerror2){
                     //return error (e.g. invalid credential)
@@ -78,43 +75,6 @@ const Loginpage = () => {
                     setError(error_msg);
                 }
                 else{
-                    //fetch successfully - valid user
-                    // const password_input = logincred.password;
-                    // const password = data[0]['Password'];
-                    // const password_db = password.slice(2, -1);
-
-                    // const hashPassword = bcrypt.hashSync(password_input, 10);
-                    // console.log(hashPassword);
-                    // console.log(typeof(hashPassword));
-                    // console.log(password_db);
-                    // console.log(typeof(password_db));
-
-                    // bcrypt.compare(password_db, hashPassword, function(err, isMatch){
-                    //     if(err){
-                    //         throw err;
-                    //     }else if(!isMatch){
-                    //         console.log("Password doesn't match!");
-                    //     }else{
-                    //         console.log('Password matches!');
-                    //     }
-                    // })
-
-                    // //check password 
-                    // if(password_input === password){
-                    //     const FirstName = data[0]['FirstName'];
-
-                    //     sessionStorage.setItem("emp_id", logincred.emp_id);
-                    //     sessionStorage.setItem("name", FirstName);
-
-                    //     setError("");
-                    //     navigate('/Home');
-                    // }
-                    // else{
-                    //     //password incorrect
-                    //     const error_msg = 'Invalid Credential'
-                    //     setError(error_msg);
-                    // }
-
                     const FirstName = data[0]['FirstName'];
                     sessionStorage.setItem("emp_id", logincred.emp_id);
                     sessionStorage.setItem("name", FirstName);

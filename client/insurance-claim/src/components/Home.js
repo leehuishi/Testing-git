@@ -1,11 +1,11 @@
 import Claims from './Claims';
 import Button from './Button';
 import { useNavigate } from "react-router-dom";
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 const Home = () => {
   const navigate = useNavigate();
-
+  const [message, setMessage] = useState("");
   //=========================================================
   // Check login (set emp_id)
   //=========================================================
@@ -38,7 +38,7 @@ const Home = () => {
             <h2>Welcome, <span>{name}</span></h2>
             <Button color='green' text='Add' onClick2={addclaim} />
         </div>
-
+           
         <Claims />
     </>
   );

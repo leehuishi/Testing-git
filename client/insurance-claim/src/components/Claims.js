@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Claims2 from './Claims2'
 import { useNavigate } from "react-router-dom"
 
-const Claims = () => {
+const Claims = ({message}) => {
     const emp_id = sessionStorage.getItem("emp_id");
     const [claims, setClaims] = useState([]);
     const[error, setError] = useState("");
@@ -23,7 +23,7 @@ const Claims = () => {
             }
         })
         .catch(error => {
-            return { "error" : "There was a problem with the fetch operation" }
+            return { "error" : "There is a technical issue. Please kindly try again later." } //There was a problem with the fetch operation
         });
     }
     
@@ -65,7 +65,7 @@ const Claims = () => {
     }
 
     return (
-        <>
+        <>  
             {(error !== "") ? (<div className="error" style={{paddingBottom: 20}}>{error}</div>) : ""}    
             {claims.length > 0 && error === "" ? <Claims2 claims={claims} onCancel={cancelClaim} onEdit={editClaim}/>: ('No Claims To Show')}
         </>

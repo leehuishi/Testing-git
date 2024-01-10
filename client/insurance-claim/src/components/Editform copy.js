@@ -1,39 +1,40 @@
 import { useState, useEffect } from 'react';
-import Pol from './Pol';
+import Proj from './Proj';
+import Ccy from './Ccy';
+import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const Editform = ({ editClaim, Policies, error, navhome, claim2, claimid2 }) => {
+const Editform = ({ onEdit, projects, ccies, error, navhome, claim2, claimid2 }) => {
     const emp_id = sessionStorage.getItem("emp_id");
-    const claim = claim2[0]
+    const claim3 = claim2[0];
+    
 
     const [ClaimID, setClaimID] = useState(claimid2);
-    const [InsuranceID, setInsuranceID] = useState(claim.InsuranceID);
+    const [ProjectID, setProjectID] = useState(claim3.ProjectID);
     const [EmployeeID,  setEmployeeID] = useState(emp_id);
-    const [FirstName, setFirstName] = useState(claim.FirstName);
-    const [LastName, setLastName] = useState(claim.LastName);
-    const raw_edate = claim.ExpenseDate;
+    const [CurrencyID, setCurrencyID] = useState(claim3.CurrencyID);
+    const raw_edate = claim3.ExpenseDate;
     const edate = new Date(raw_edate);
     const [ExpenseDate, setExpenseDate] = useState(edate);
-    const [Amount, setAmount] = useState(claim.Amount);
-    const [Purpose, setPurpose] = useState(claim.Purpose);
-    const [FollowUp, setFollowUp] = useState(claim.FollowUp);
-    const [PreviousClaimID, setPreviousClaimID] = useState(claim.PreviousClaimID);
+    const [Amount, setAmount] = useState(claim3.Amount);
+    const [Purpose, setPurpose] = useState(claim3.Purpose);
+    const [ChargetoDefault, setChargetoDefault] = useState(claim3.ChargeToDefaultDept);
+    const [AlternativeDept, setAlternativeDept] = useState(claim3.AlternativeDeptCode);
 
     const onSubmit = (e) => {
         e.preventDefault(); //does not submit to a page
 
-        editClaim({ ClaimID, InsuranceID, EmployeeID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID});
+        onEdit({ ProjectID, EmployeeID, CurrencyID, ExpenseDate, Amount, Purpose, ChargetoDefault, AlternativeDept, ClaimID});
 
         // //clear form
-        setInsuranceID('');
-        setFirstName('');
-        setLastName('');
+        setProjectID('');
+        setCurrencyID('');
         setExpenseDate(new Date());
         setAmount('');
         setPurpose('');
-        setFollowUp(false);
-        setPreviousClaimID('');
+        setChargetoDefault(false);
+        setAlternativeDept('');
     }
 
     return (
@@ -41,16 +42,11 @@ const Editform = ({ editClaim, Policies, error, navhome, claim2, claimid2 }) => 
             {(error !== "") ? (<div className="error">{error}</div>) : ""}
 
             <div className='form-control2'>
-                <label>Claim ID</label>
-                <input type='text' value={ClaimID} readonly/>
-            </div>
-
-            <div className='form-control2'>
-                <label>Insurance Type:</label>
-                <select value={InsuranceID} onChange={(e) => setInsuranceID(e.target.value)}>
-                    <option value=''>Select Type</option>
-                    {Policies.map((policy) => (
-                        <Pol key={policy.InsuranceID} policy={policy} />
+                <label>Project ID:</label>
+                <select value={ProjectID} onChange={(e) => setProjectID(e.target.value)}>
+                    <option value=''>Select Project</option>
+                    {projects.map((project) => (
+                        <Proj key={project.ProjectID} project={project} />
                     ))}
 
                 </select>
@@ -62,13 +58,13 @@ const Editform = ({ editClaim, Policies, error, navhome, claim2, claimid2 }) => 
             </div>
 
             <div className='form-control2'>
-                <label>First Name</label>
-                <input value={FirstName} onChange={(e) => setFirstName(e.target.value)}/>
-            </div>
-
-            <div className='form-control2'>
-                <label>Last Name</label>
-                <input value={LastName} onChange={(e) => setLastName(e.target.value)}/>
+                <label>Currency:</label>
+                <select value={CurrencyID} onChange={(e) => setCurrencyID(e.target.value)}>
+                    <option value=''>Select Currency</option>
+                    {ccies.map((ccy) => (
+                        <Ccy key={ccy.CurrencyID} ccy={ccy} />
+                    ))}
+                </select>
             </div>
 
             <div className='form-control2'>
@@ -87,17 +83,17 @@ const Editform = ({ editClaim, Policies, error, navhome, claim2, claimid2 }) => 
             </div>
             
             <div className='form-control2 form-control2-check'>
-                <label>Follow Up</label>
+                <label>Charge to Default Dept</label>
                 <input type='checkbox' 
-                checked={FollowUp}
-                value={FollowUp} 
-                onChange={(e) => setFollowUp(e.currentTarget.checked)}/>
+                checked={ChargetoDefault}
+                value={ChargetoDefault} 
+                onChange={(e) => setChargetoDefault(e.currentTarget.checked)}/>
             </div>
 
-            {FollowUp === true ? (
+            {ChargetoDefault === true ? (
                 <div className='form-control2'>
-                    <label>Previous Claim ID</label>
-                    <input value={PreviousClaimID} onChange={(e) => setPreviousClaimID(e.target.value)}/>
+                    <label>Alternative Dept Code</label>
+                    <input value={AlternativeDept} onChange={(e) => setAlternativeDept(e.target.value)}/>
                 </div>
             ): ''}
 

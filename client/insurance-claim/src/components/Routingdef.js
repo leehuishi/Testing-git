@@ -3,6 +3,7 @@ import Loginpage from './Loginpage';
 import Home from './Home';
 import Header from './Header';
 import Addclaim from './Addclaim';
+import Editclaim from './Editclaim';
 import Cancelclaim from './Cancelclaim';
 import { Route, Routes } from "react-router-dom";
 
@@ -48,7 +49,7 @@ const Routingdef = () => {
           <>
             <div className="container2">
               <Header /> 
-              <Addclaim />
+              <Editclaim />
             </div>
           </>
         } 

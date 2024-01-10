@@ -9,23 +9,22 @@ cors = CORS(app)
 app.config['JSON_SORT_KEYS'] = False
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+#Time configuration
+db_f = '%Y-%m-%d %H:%M:%S' # Database datetime format
+disp_f = '%d-%m-%Y %I:%M %p' #Display datetime format
+given_f = "%a %b %d %Y %H:%M:%S " # Thu Sep 28 2023 00:15:45 (from user input)
+give_f = "%a %b %d %Y %H:%M:%S" # Thu Sep 28 2023 00:15:45 GMT+0800 (Singapore Standard Time) {} (for user edit)
+
 nowDT_raw = datetime.now()
-f = '%Y-%m-%d %H:%M:%S'
-disp_f = '%d-%m-%Y %I:%M %p'
-# given_f = "%d/%m/%Y %H:%M:%S" # Thu Sep 28 2023 00:15:45 GMT+0800 (Singapore Standard Time) {}
-given_f = "%a %b %d %Y %H:%M:%S " # Thu Sep 28 2023 00:15:45 
-give_f = "%a %b %d %Y %H:%M:%S" # Thu Sep 28 2023 00:15:45 GMT+0800 (Singapore Standard Time) {}
-
 nowDT = nowDT_raw.replace(second=0, microsecond=0)
-currentDT = nowDT.strftime(f)
-
+currentDT = nowDT.strftime(db_f)
 
 #Database connection
 mydb = mysql.connector.connect(
     host = 'localhost',
     user = 'root',
     password = 'Mysql@12345678',
-    database = 'expenseclaimsdata'
+    database = 'InsuranceProgram'
 )
 
 #-----------------------------------------------------------------------------------
@@ -33,7 +32,7 @@ mydb = mysql.connector.connect(
 #-----------------------------------------------------------------------------------
 def claim_exists(claim_id):
     mycursor = mydb.cursor()
-    sql = "SELECT ClaimID FROM projectexpenseclaims WHERE ClaimID = %s"
+    sql = "SELECT ClaimID FROM InsuranceClaims WHERE ClaimID = %s"
     val = (claim_id,)
     mycursor.execute(sql, val)
     myresult = mycursor.fetchall()
@@ -43,20 +42,7 @@ def claim_exists(claim_id):
         return True
     else:
         return False
-
-#-----------------------------------------------------------------------------------
-#fetch new claim id
-#-----------------------------------------------------------------------------------
-def new_claim_id():
-    try:
-        mycursor = mydb.cursor()
-        mycursor.execute("SELECT MAX(ClaimID) as claim_id from projectexpenseclaims")
-        myresult = mycursor.fetchall()
-        mycursor.close()
-    except mysql.connector.Error as e:
-        return ("Something went wrong: {}".format(e))
-    return myresult[0][0]+1
-
+    
 #-----------------------------------------------------------------------------------
 #check dateformat
 #-----------------------------------------------------------------------------------
@@ -69,6 +55,19 @@ def checkdate(datestr):
         result = False
     
     return result
+
+#-----------------------------------------------------------------------------------
+#fetch new claim id
+#-----------------------------------------------------------------------------------
+def new_claim_id():
+    try:
+        mycursor = mydb.cursor()
+        mycursor.execute("SELECT MAX(ClaimID) as claim_id from InsuranceClaims")
+        myresult = mycursor.fetchall()
+        mycursor.close()
+    except mysql.connector.Error as e:
+        return ("Something went wrong: {}".format(e))
+    return myresult[0][0]+1
 
 
 #----------------------------------------------------------------------------------- 
@@ -85,9 +84,11 @@ def login_check():
         emp_id = request.args.get('emp_id')
         password_input = request.args.get('password')
 
+        print(request.args.get)
+
         try:
             mycursor = mydb.cursor()
-            sql = "SELECT EmployeeID, Password, FirstName FROM employee WHERE EmployeeID = %s"
+            sql = "SELECT EmployeeID, Password, FirstName FROM User WHERE EmployeeID = %s"
             val = (emp_id,)
             mycursor.execute(sql, val)
             myresult = mycursor.fetchone()
@@ -97,8 +98,8 @@ def login_check():
                 acct_list = []
 
                 EmployeeID = myresult[0]
-                FirstName = myresult[2]
                 Password_raw = myresult[1]
+                FirstName = myresult[2]
 
                 #check encrypted password
                 password_input2 = password_input.encode('utf-8') 
@@ -126,7 +127,6 @@ def login_check():
         except mysql.connector.Error as e:
             return ("Something went wrong: {}".format(e))
 
-
 #----------------------------------------------------------------------------------- 
 #Retrieve claims based on Employee ID
 #----------------------------------------------------------------------------------- 
@@ -140,7 +140,12 @@ def claims():
 
         try:
             mycursor = mydb.cursor()
-            sql = "SELECT A.ClaimID, A.ProjectID, B.ProjectName, A.CurrencyID, A.ExpenseDate, A.Amount, A.Purpose, A.Status FROM projectexpenseclaims A, employeeprojects B WHERE A.ProjectID = B.ProjectID AND A.EmployeeID = %s"
+            sql = "SELECT A.ClaimID, B.InsuranceType, A.ExpenseDate, A.Amount, A.Purpose, A.PreviousClaimID, A.Status "
+            sql += "FROM InsuranceClaims A, InsurancePolicies B, User C "
+            sql += "WHERE A.InsuranceID = B.InsuranceID "
+            sql += "AND B.EmployeeID = C.EmployeeID "
+            sql += "AND C.EmployeeID = %s"
+            sql += "ORDER BY A.ClaimID ASC"
             val = (emp_id,)
             mycursor.execute(sql, val)
             myresult = mycursor.fetchall()
@@ -151,25 +156,25 @@ def claims():
             if myresult:
                 for claim in myresult:
                     ClaimID = claim[0]
-                    ProjectID = claim[1]
-                    ProjectName = claim[2]
-                    CurrencyID = claim[3]
-                    ExpenseDate = claim[4].strftime(disp_f)
-                    Amount = str(claim[5])
-                    Purpose = claim[6]
-                    Status = claim[7]
+                    InsuranceType = claim[1]
+                    Amount = str(claim[3])
+                    Purpose = claim[4]
+                    PreviousClaimID = claim[5]
+                    Status = claim[6]
+
+                    ExpenseDate_raw = claim[2]
+                    ExpenseDate_raw2 = datetime.strptime(ExpenseDate_raw, db_f)
+                    ExpenseDate = ExpenseDate_raw2.strftime(disp_f)
 
                     new_claim = {
-                                'ClaimID':ClaimID, 
-                                'ProjectID':ProjectID,
-                                'ProjectName':ProjectName,
-                                'CurrencyID':CurrencyID,
-                                'ExpenseDate':ExpenseDate,
-                                'ProjectID':ProjectID,
-                                'Amount':Amount,
-                                'Purpose':Purpose,
-                                'Status':Status
-                            }
+                        'ClaimID':ClaimID, 
+                        'InsuranceType':InsuranceType,
+                        'ExpenseDate':ExpenseDate,
+                        'Amount':Amount,
+                        'Purpose':Purpose,
+                        'PreviousClaimID':PreviousClaimID,
+                        'Status':Status,
+                    }
                     claims.append(new_claim)
             
             return jsonify(claims)
@@ -177,7 +182,6 @@ def claims():
         except mysql.connector.Error as e:
             return ("Something went wrong: {}".format(e))
         
-
 #----------------------------------------------------------------------------------- 
 #Retrieve claim based on Claim ID
 #----------------------------------------------------------------------------------- 
@@ -191,7 +195,10 @@ def claim():
 
         try:
             mycursor = mydb.cursor()
-            sql = "SELECT ClaimID, ProjectID, CurrencyID, ExpenseDate, Amount, Purpose, ChargeToDefaultDept, AlternativeDeptCode FROM projectexpenseclaims WHERE ClaimID = %s"
+            sql = "SELECT ClaimID, InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID "
+            sql += "FROM InsuranceClaims "
+            sql += "WHERE ClaimID = %s "
+            sql += "ORDER BY ClaimID ASC"
             val = (claim_id,)
             mycursor.execute(sql, val)
             myresult = mycursor.fetchall()
@@ -199,34 +206,41 @@ def claim():
 
             claims = []
 
+            # print(myresult)
+
             if myresult:
                 claim = myresult[0]
 
                 ClaimID = claim[0]
-                ProjectID = claim[1]
-                CurrencyID = claim[2]
-                ExpenseDate = claim[3].strftime(give_f)
-                Amount = str(claim[4])
-                Purpose = claim[5]
-                ChargeToDefaultDept_raw = claim[6]
-                AlternativeDeptCode = claim[7]
+                InsuranceID = claim[1]
+                FirstName = claim[2]
+                LastName = claim[3]
+                Amount = str(claim[5])
+                Purpose = claim[6]
+                FollowUp_raw = claim[7]
+                PreviousClaimID = claim[8]
 
-                if(ChargeToDefaultDept_raw == 1):
-                    ChargeToDefaultDept = True
+
+                ExpenseDate_raw = claim[4]
+                ExpenseDate_raw2 = datetime.strptime(ExpenseDate_raw, db_f)
+                ExpenseDate = ExpenseDate_raw2.strftime(give_f)
+
+                if(FollowUp_raw == 1):
+                    FollowUp = True
                 else:
-                    ChargeToDefaultDept = False
+                    FollowUp = False
 
                 new_claim = {
-                            'ClaimID':ClaimID, 
-                            'ProjectID':ProjectID,
-                            'CurrencyID':CurrencyID,
-                            'ExpenseDate':ExpenseDate,
-                            'ProjectID':ProjectID,
-                            'Amount':Amount,
-                            'Purpose':Purpose,
-                            'ChargeToDefaultDept':ChargeToDefaultDept,
-                            'AlternativeDeptCode': AlternativeDeptCode
-                        }
+                    'ClaimID':ClaimID, 
+                    'InsuranceID':InsuranceID,
+                    'FirstName':FirstName,
+                    'LastName':LastName,
+                    'ExpenseDate':ExpenseDate,
+                    'Amount':Amount,
+                    'Purpose':Purpose,
+                    'FollowUp': FollowUp,
+                    'PreviousClaimID':PreviousClaimID
+                }
                 
                 claims.append(new_claim)
             
@@ -234,75 +248,43 @@ def claim():
 
         except mysql.connector.Error as e:
             return ("Something went wrong: {}".format(e))
-        
+
 #----------------------------------------------------------------------------------- 
-#Retrieve project list
+#Retrieve Policies list
 #----------------------------------------------------------------------------------- 
-@app.route('/projects', methods = ['GET'])
+@app.route('/policies', methods = ['GET'])
 @cross_origin()
 def projects():
-    # if "emp_id" not in request.args:
-    #     return {'error':'Employee ID not provided'}
-    # else:
-    #     emp_id = request.args.get('emp_id')
+    if "emp_id" not in request.args:
+        return {'error':'Employee ID not provided'}
+    else:
+        emp_id = request.args.get('emp_id')
 
     try:
         mycursor = mydb.cursor()
-        sql = "SELECT ProjectID, ProjectName FROM employeeprojects"
-        mycursor.execute(sql)
-        # sql = "SELECT ProjectID, ProjectName FROM employeeprojects WHERE EmployeeID = %s"
-        # val = (emp_id,)
-        # mycursor.execute(sql, val)
+        sql = "SELECT InsuranceID, InsuranceType FROM InsurancePolicies WHERE EmployeeID = %s"
+        val = (emp_id,)
+        mycursor.execute(sql, val)
         myresult = mycursor.fetchall()
         mycursor.close()
 
-        projects = []
+        Policies = []
 
         if myresult:
-            for project in myresult:
-                ProjectID = project[0]
-                ProjectName = project[1]
+            for Policy in myresult:
+                InsuranceID = Policy[0]
+                InsuranceType = Policy[1]
 
-                new_proj = {
-                            'ProjectID':ProjectID, 
-                            'ProjectName':ProjectName
+                new_policy = {
+                            'InsuranceID':InsuranceID, 
+                            'InsuranceType':InsuranceType
                         }
-                projects.append(new_proj)
+                Policies.append(new_policy)
         
-        return jsonify(projects)
+        return jsonify(Policies)
 
     except mysql.connector.Error as e:
         return ("Something went wrong: {}".format(e))
-        
-#----------------------------------------------------------------------------------- 
-#Retrieve currency list
-#----------------------------------------------------------------------------------- 
-@app.route('/currencies', methods = ['GET'])
-@cross_origin()
-def currencies():
-    try:
-        mycursor = mydb.cursor()
-        sql = "select CurrencyID from currency"
-        mycursor.execute(sql)
-        myresult = mycursor.fetchall()
-        mycursor.close()
-
-        currencies = []
-
-        if myresult:
-            for currency in myresult:
-                CurrencyID = currency[0]
-
-                new_ccy = {
-                            'CurrencyID': CurrencyID
-                        }
-                currencies.append(new_ccy)
-        
-        return jsonify(currencies)
-
-    except mysql.connector.Error as e:
-        return ("Something went wrong: {}".format(e))
-        
 
 
 #-----------------------------------------------------------------------------------
@@ -315,63 +297,70 @@ def addclaim():
     if not claim_info:
             return {'error': 'Claim data not provide'}
     
+    print(claim_info)
     #-------------------------------
     #Prepare values
     #-------------------------------
-    if "ProjectID" not in claim_info:
-        return "ERROR: ProjectID not provided"
-    elif not isinstance(claim_info['ProjectID'], int):
-        return "ERROR: Invalid ProjectID"
+    if "InsuranceID" not in claim_info:
+        return "error: InsuranceID not provided"
+    elif not isinstance(claim_info['InsuranceID'], int):
+        return "error: Invalid InsuranceID"
     else:
-        ProjectID = claim_info['ProjectID']
+        InsuranceID = claim_info['InsuranceID']
 
     #-------------------------------
     if "EmployeeID" not in claim_info:
-        return "ERROR: EmployeeID not provided"
+        return "error: EmployeeID not provided"
     elif not isinstance(claim_info['EmployeeID'], int):
-        return "ERROR: Invalid EmployeeID"
+        return "error: Invalid EmployeeID"
     else:
         EmployeeID = claim_info['EmployeeID']
     
     #-------------------------------
-    if "CurrencyID" not in claim_info:
-        return "ERROR: CurrencyID not provided"
+    if "FirstName" not in claim_info:
+        return "error: FirstName not provided"
     else:
-        CurrencyID = claim_info['CurrencyID']
+        FirstName = claim_info['FirstName']
+
+    #-------------------------------
+    if "LastName" not in claim_info:
+        return "error: LastName not provided"
+    else:
+        LastName = claim_info['LastName']
+    
     
     #-------------------------------
     if "ExpenseDate" not in claim_info:
-        return "ERROR: ExpenseDate not provided"
+        return "error: ExpenseDate not provided"
     else:
         ExpenseDate_raw = claim_info['ExpenseDate']
         ExpenseDate_raw2 = ExpenseDate_raw[0:25] # Thu Sep 28 2023 00:15:45 GMT+0800 (Singapore Standard Time) {}
     if not checkdate(ExpenseDate_raw2):
-        return "ERROR: ExpenseDate format incorrect"
+        return "error: ExpenseDate format incorrect"
     else:
-        raw_dt_raw = datetime.strptime(ExpenseDate_raw2, given_f)
-        raw_dt = raw_dt_raw.replace(second=0, microsecond=0)
-        ExpenseDate = raw_dt.strftime(f)
+        raw_dt = datetime.strptime(ExpenseDate_raw2, given_f)
+        ExpenseDate = raw_dt.strftime(db_f)
     
     #-------------------------------
     if "Amount" not in claim_info:
-        return "ERROR: Amount not provided"
+        return "error: Amount not provided"
     else:
         Amount = claim_info['Amount']
     
     #-------------------------------
     if "Purpose" not in claim_info:
-        return "ERROR: Purpose not provided"
+        return "error: Purpose not provided"
     else:
         Purpose = claim_info['Purpose']
     
     #-------------------------------
     x = [0, 1]
-    if "ChargetoDefault" not in claim_info:
-        return "ERROR: ChargetoDefault not provided"
-    elif claim_info['ChargetoDefault'] not in x:
-        return "ERROR: Invalid ChargetoDefault"
+    if "FollowUp" not in claim_info:
+        return "error: FollowUp not provided"
+    elif claim_info['FollowUp'] not in x:
+        return "error: Invalid FollowUp"
     else:
-        ChargetoDefault = claim_info['ChargetoDefault']
+        FollowUp = claim_info['FollowUp']
 
     #-------------------------------
     #get claim id
@@ -379,23 +368,29 @@ def addclaim():
     if not isinstance(ClaimID, int):
         return ClaimID
     
-    #-------------------------------
-    if "AlternativeDept" in claim_info:
-        AlternativeDept = claim_info['AlternativeDept']
-    else:
-        AlternativeDept = ''
-
-    #-------------------------------
+     #-------------------------------
     Status = "Pending"
 
     #-------------------------------
     LastEdit = currentDT
     
+
+    #-------------------------------
+    if "PreviousClaimID" in claim_info:
+        if isinstance(claim_info['PreviousClaimID'], int):
+            PreviousClaimID = claim_info['PreviousClaimID']
+            query = "INSERT INTO InsuranceClaims (ClaimID, InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID, Status, LastEditedClaimDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            val = (ClaimID, InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID, Status, LastEdit) 
+        else:
+            return "error: Invalid PreviousClaimID"
+    else:
+        query = "INSERT INTO InsuranceClaims (ClaimID, InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, Status, LastEditedClaimDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        val = (ClaimID, InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, Status, LastEdit) 
+
+   
     #-------------------------------
     try:
         mycursor = mydb.cursor()
-        query = "INSERT INTO projectexpenseclaims (ClaimID, ProjectID, EmployeeID, CurrencyID, ExpenseDate, Amount, Purpose, ChargeToDefaultDept, AlternativeDeptCode, Status, LastEditedClaimDate) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        val = (ClaimID, ProjectID, EmployeeID, CurrencyID, ExpenseDate, Amount, Purpose, ChargetoDefault, AlternativeDept, Status, LastEdit) 
         mycursor.execute(query, val)
         mydb.commit()
         mycursor.close()
@@ -404,45 +399,6 @@ def addclaim():
     
     return {"status":"Successfully insert"}
 
-#-----------------------------------------------------------------------------------
-# Cancel claims
-#-----------------------------------------------------------------------------------            
-@app.route('/cancelclaim', methods = ['PUT'])
-@cross_origin()
-def cancelclaim():
-    claim = request.json
-    if not claim:
-            return {'error': 'claim not provide'}
-
-    if "claim_id" not in claim:
-        return "ERROR: claim_id not provided"
-    
-    claim_id = claim['claim_id']
-
-    check_claim = claim_exists(claim_id)
-    
-    if not check_claim:
-        #entered claim do not exist
-        return {'error':'Claim do not exist'}
-    else:
-        #claim exist do 
-        try:
-            mycursor = mydb.cursor()
-            query = "UPDATE projectexpenseclaims SET Status = 'Cancelled' WHERE ClaimID =%s"
-            val = (claim_id,) 
-            mycursor.execute(query, val)
-            mydb.commit()
-            mycursor.close()
-        except mysql.connector.Error as e:
-            return ("Something went wrong: {}".format(e))
-        
-        returnstatus = {
-            "ClaimID": str(claim_id),
-            "Status": "Cancelled"
-        }
-        
-        return jsonify(returnstatus)
-    
 
 #-----------------------------------------------------------------------------------
 # Edit claims
@@ -457,76 +413,73 @@ def editclaim():
     #-------------------------------
     #Prepare values
     #-------------------------------
-    if "ProjectID" not in claim_info:
-        return "ERROR: ProjectID not provided"
-    elif not isinstance(claim_info['ProjectID'], int):
-        return "ERROR: Invalid ProjectID"
+    if "ClaimID" not in claim_info:
+        return "error: ClaimID not provided"
+    elif not isinstance(claim_info['ClaimID'], int):
+        return "error: Invalid ClaimID"
     else:
-        ProjectID = claim_info['ProjectID']
+        ClaimID = claim_info['ClaimID']
 
     #-------------------------------
-    if "EmployeeID" not in claim_info:
-        return "ERROR: EmployeeID not provided"
-    elif not isinstance(claim_info['EmployeeID'], int):
-        return "ERROR: Invalid EmployeeID"
+    if "InsuranceID" not in claim_info:
+        return "error: InsuranceID not provided"
+    elif not isinstance(claim_info['InsuranceID'], int):
+        return "error: Invalid InsuranceID"
     else:
-        EmployeeID = claim_info['EmployeeID']
+        InsuranceID = claim_info['InsuranceID']
+
+    #-------------------------------
+    if "FirstName" not in claim_info:
+        return "error: FirstName not provided"
+    else:
+        FirstName = claim_info['FirstName']
     
     #-------------------------------
-    if "CurrencyID" not in claim_info:
-        return "ERROR: CurrencyID not provided"
+    if "LastName" not in claim_info:
+        return "error: LastName not provided"
     else:
-        CurrencyID = claim_info['CurrencyID']
+        LastName = claim_info['LastName']
     
     #-------------------------------
     if "ExpenseDate" not in claim_info:
-        return "ERROR: ExpenseDate not provided"
+        return "error: ExpenseDate not provided"
     else:
         ExpenseDate_raw = claim_info['ExpenseDate']
         ExpenseDate_raw2 = ExpenseDate_raw[0:25] # Thu Sep 28 2023 00:15:45 GMT+0800 (Singapore Standard Time) {}
     if not checkdate(ExpenseDate_raw2):
-        return "ERROR: ExpenseDate format incorrect"
+        return "error: ExpenseDate format incorrect"
     else:
         raw_dt_raw = datetime.strptime(ExpenseDate_raw2, given_f)
         raw_dt = raw_dt_raw.replace(second=0, microsecond=0)
-        ExpenseDate = raw_dt.strftime(f)
+        ExpenseDate = raw_dt.strftime(db_f)
     
     #-------------------------------
     if "Amount" not in claim_info:
-        return "ERROR: Amount not provided"
+        return "error: Amount not provided"
     else:
         Amount = claim_info['Amount']
     
     #-------------------------------
     if "Purpose" not in claim_info:
-        return "ERROR: Purpose not provided"
+        return "error: Purpose not provided"
     else:
         Purpose = claim_info['Purpose']
     
     #-------------------------------
     x = [0, 1]
-    if "ChargetoDefault" not in claim_info:
-        return "ERROR: ChargetoDefault not provided"
-    elif claim_info['ChargetoDefault'] not in x:
-        return "ERROR: Invalid ChargetoDefault"
+    if "FollowUp" not in claim_info:
+        return "error: FollowUp not provided"
+    elif claim_info['FollowUp'] not in x:
+        return "error: Invalid FollowUp"
     else:
-        ChargetoDefault = claim_info['ChargetoDefault']
+        FollowUp = claim_info['FollowUp']
 
     #-------------------------------
-    #get claim id
-    if "ClaimID" not in claim_info:
-        return "ERROR: ClaimID not provided"
-    else:
-        ClaimID = claim_info['ClaimID']
-    
-    #-------------------------------
-    if "AlternativeDept" in claim_info:
-        AlternativeDept = claim_info['AlternativeDept']
-    else:
-        AlternativeDept = ''
-
-    #-------------------------------
-    Status = "Pending"
+    if "PreviousClaimID" in claim_info:
+        if isinstance(claim_info['PreviousClaimID'], int):
+            PreviousClaimID = claim_info['PreviousClaimID']
+        else:
+            return "error: Invalid PreviousClaimID"
 
     #-------------------------------
     LastEdit = currentDT
@@ -534,9 +487,8 @@ def editclaim():
     #-------------------------------
     try:
         mycursor = mydb.cursor()
-        query = "UPDATE projectexpenseclaims SET ProjectID = %s, EmployeeID = %s, CurrencyID = %s, ExpenseDate = %s, Amount = %s, Purpose = %s, ChargeToDefaultDept = %s, AlternativeDeptCode = %s, Status = %s, LastEditedClaimDate = %s WHERE ClaimID = %s"
-        val = (ProjectID, EmployeeID, CurrencyID, ExpenseDate, Amount, Purpose, ChargetoDefault, AlternativeDept, Status, LastEdit, ClaimID) 
-        # print(query)
+        query = "UPDATE InsuranceClaims SET InsuranceID = %s, FirstName = %s, LastName = %s, ExpenseDate = %s, Amount = %s, Purpose = %s, FollowUp = %s, PreviousClaimID = %s, LastEditedClaimDate = %s WHERE ClaimID = %s"
+        val = (InsuranceID, FirstName, LastName, ExpenseDate, Amount, Purpose, FollowUp, PreviousClaimID, LastEdit, ClaimID) 
         mycursor.execute(query, val)
         mydb.commit()
         mycursor.close()
@@ -544,42 +496,45 @@ def editclaim():
         return ("Something went wrong: {}".format(e))
     
     return {"status":"Successfully edit"}
-    
 
 #-----------------------------------------------------------------------------------
-# Delete claims
+# Cancel claims
 #-----------------------------------------------------------------------------------            
-# @app.route('/deleteclaim', methods = ['DELETE'])
-# @cross_origin()
-# def deleteclaim():
-#     claim = request.json
-#     if not claim:
-#             return {'error': 'claim_id not provide'}
+@app.route('/cancelclaim', methods = ['PUT'])
+@cross_origin()
+def cancelclaim():
+    claim = request.json
+    if not claim:
+            return {'error': 'claim not provide'}
 
-#     if "claim_id" not in claim:
-#         return "ERROR: claim_id not provided"
+    if "ClaimID" not in claim:
+        return "error: ClaimID not provided"
     
-#     claim_id = claim['claim_id']
+    ClaimID = claim['ClaimID']
 
-#     check_claim = claim_exists(claim_id)
+    check_claim = claim_exists(ClaimID)
     
-#     if not check_claim:
-#         #entered claim do not exist
-#         return {'error':'Claim do not exist'}
-#     else:
-#         #claim exist do 
-#         try:
-#             mycursor = mydb.cursor()
-#             query = "DELETE FROM projectexpenseclaims WHERE ClaimID = %s"
-#             val = (claim_id,) 
-#             mycursor.execute(query, val)
-#             mydb.commit()
-#             mycursor.close()
-#         except mysql.connector.Error as e:
-#             return ("Something went wrong: {}".format(e))
+    if not check_claim:
+        #entered claim do not exist
+        return {'error':'Claim do not exist'}
+    else:
+        #claim exist do 
+        try:
+            mycursor = mydb.cursor()
+            query = "UPDATE InsuranceClaims SET Status = 'Cancelled' WHERE ClaimID =%s"
+            val = (ClaimID,) 
+            mycursor.execute(query, val)
+            mydb.commit()
+            mycursor.close()
+        except mysql.connector.Error as e:
+            return ("Something went wrong: {}".format(e))
         
-#         return {"status":"Successfully Delete: Claim ID - " + claim_id}
-    
+        returnstatus = {
+            "ClaimID": str(ClaimID),
+            "Status": "Cancelled"
+        }
+        
+        return jsonify(returnstatus)
     
 #-----------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------

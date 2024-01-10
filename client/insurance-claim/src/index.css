@@ -180,3 +180,7 @@ td {
   height: 20px;
   width: 40%;
 }
+
+.error {
+  color:red;
+}
