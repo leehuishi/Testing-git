@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import Claims2 from './Claims2'
 import { useNavigate } from "react-router-dom"
 
-const Claims = ({message}) => {
+const Claims = () => {
     const emp_id = sessionStorage.getItem("emp_id");
     const [claims, setClaims] = useState([]);
     const[error, setError] = useState("");
